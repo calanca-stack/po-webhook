@@ -5,9 +5,14 @@ app = Flask(__name__)
 
 BOT_TOKEN = os.environ.get("8273484772:AAE-7tzaN6HrZOFyU8Cv_8QiZMO-fNDqeDI")  # defina na Render
 CHAT_ID   = os.environ.get("1259600584")    # defina na Render
+TG_API = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
 
-TG_API = "https://api.telegram.org/bot{}/sendMessage".format(BOT_TOKEN)
+TV_SECRET = os.environ.get("TV_SECRET", "")
 
+@app.route("/health", methods=["GET"])
+def health():
+    return jsonify(ok=True), 200
+    
 def send(msg: str):
     if not BOT_TOKEN or not CHAT_ID:
         return
@@ -26,8 +31,20 @@ def ping():
     send(f"✅ Ping recebido {now}Z")
     return jsonify(ok=True, t=now)
 
+# --- Segurança: validar o header secreto ---
+from flask import abort
+TV_SECRET = os.environ.get("TV_SECRET", "")
+
+# --- Health check (Render e UptimeRobot) ---
+@app.route("/health", methods=["GET"])
+def health():
+    return jsonify(ok=True), 200
+
 @app.route("/tv", methods=["POST"])
 def tv():
+  if TV_SECRET and request.headers.get("X-TV-Secret") != TV_SECRET:
+        return abort(401)    
+    
     data = request.get_json(force=True, silent=True) or {}
     # aceita tanto alerta manual quanto do script
     side   = data.get("side", "?")
