@@ -34,6 +34,23 @@ def ping():
     send(f"✅ Ping recebido {now}Z")
     return jsonify(ok=True, t=now)
 
+# --- DIAGNÓSTICO ---
+@app.route("/healthz", methods=["GET"])
+def healthz():
+    return jsonify(
+        ok=True,
+        has_token=bool(BOT_TOKEN),
+        token_prefix=(BOT_TOKEN[:8] + "..." if BOT_TOKEN else None),
+        has_chat=bool(CHAT_ID),
+        chat_id=CHAT_ID,
+    )
+
+@app.route("/test", methods=["GET"])
+def test():
+    msg = request.args.get("msg", "Teste via /test")
+    send(f"🔧 {msg}")
+    return jsonify(ok=True)
+# --- FIM DIAGNÓSTICO ---
 
 @app.route("/tv", methods=["POST"])
 def tv():
