@@ -1,64 +1,71 @@
+# webhook.py
 from flask import Flask, request, jsonify
-import requests, os, datetime
+import requests, os, datetime as dt
 
 app = Flask(__name__)
 
-BOT_TOKEN = os.environ.get("8311253365:AAHh2IgWscBXbZ_SZnvzmF69WJQy5TRzXuI")  # defina na Render
-CHAT_ID   = os.environ.get("1259600584")    # defina na Render
-TG_API = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-
+# Variáveis configuradas no Render (Settings > Environment)
+BOT_TOKEN = os.environ.get("8311253365:AAHh2IgWscBXbZ_SZnvzmF69WJQy5TRzXuI")
+CHAT_ID   = os.environ.get("1259600584")
 TV_SECRET = os.environ.get("TV_SECRET", "")
 
-@app.route("/health", methods=["GET"])
-def health():
-    return jsonify(ok=True), 200
-    
-def send(msg: str):
-    if not BOT_TOKEN or not CHAT_ID:
+TG_API = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage" if BOT_TOKEN else None
+
+
+def send(msg: str) -> None:
+    """Envia mensagem para o Telegram"""
+    if not (TG_API and CHAT_ID):
+        print("Telegram não configurado.")
         return
     try:
-        requests.get(TG_API, params={"chat_id": CHAT_ID, "text": msg})
+        requests.get(TG_API, params={"chat_id": CHAT_ID, "text": msg}, timeout=10)
     except Exception as e:
-        print("Telegram error:", e)
+        print("Erro ao enviar para o Telegram:", e)
+
 
 @app.route("/", methods=["GET"])
 def home():
-    return "PO webhook ok"
+    return "PO Webhook ativo ✅"
+
 
 @app.route("/ping", methods=["GET"])
 def ping():
-    now = datetime.datetime.utcnow().isoformat()
+    now = dt.datetime.utcnow().isoformat()
     send(f"✅ Ping recebido {now}Z")
     return jsonify(ok=True, t=now)
 
-# --- Segurança: validar o header secreto ---
-from flask import abort
-TV_SECRET = os.environ.get("TV_SECRET", "")
-
-# --- Health check (Render e UptimeRobot) ---
-@app.route("/health", methods=["GET"])
-def health():
-    return jsonify(ok=True), 200
 
 @app.route("/tv", methods=["POST"])
 def tv():
-  if TV_SECRET and request.headers.get("X-TV-Secret") != TV_SECRET:
-        return abort(401)    
-    
+    # Proteção opcional com segredo
+    s = request.args.get("s") or request.headers.get("X-Secret")
+    if TV_SECRET and s != TV_SECRET:
+        return jsonify(ok=False, error="unauthorized"), 401
+
     data = request.get_json(force=True, silent=True) or {}
-    # aceita tanto alerta manual quanto do script
-    side   = data.get("side", "?")
-    sym    = data.get("symbol", data.get("sym", "?"))
-    price  = data.get("price", data.get("close"))
-    tf     = data.get("tf", data.get("interval", "?"))
-    exp    = data.get("expiry_s", data.get("exp", 60))
-    ts     = data.get("time", "")
+
+    side  = (data.get("side") or data.get("S") or "").upper()
+    sym   = data.get("symbol") or data.get("sym") or "?"
+    price = data.get("price") or data.get("close") or "?"
+    tf    = data.get("tf") or data.get("interval") or "?"
+    exp   = data.get("expiry_s") or data.get("exp") or 60
+    ts    = data.get("time") or data.get("t") or ""
+
+    dir_map = {"CALL": "ALTA", "BUY": "ALTA", "PUT": "BAIXA", "SELL": "BAIXA"}
+    direc = dir_map.get(side, side)
+
     msg = (
-        f"📣 Sinal {side}\n"
-        f"Símbolo: {sym}\n"
+        "📊 Sinal Detectado\n"
+        f"Direção: {direc}\n"
+        f"Ativo: {sym}\n"
         f"Preço: {price}\n"
-        f"TF: {tf}  | Exp: {exp}s\n"
+        f"Tempo gráfico: {tf}\n"
+        f"Expiração: {exp}s\n"
         f"Hora: {ts}"
     )
     send(msg)
     return jsonify(ok=True)
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8000)
