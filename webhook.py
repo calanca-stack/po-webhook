@@ -5,7 +5,7 @@ import requests, os, datetime as dt
 app = Flask(__name__)
 
 # Variáveis configuradas no Render (Settings > Environment)
-BOT_TOKEN = os.environ.get("8311253365:AAHh2IgWscBXbZ_SZnvzmF69WJQy5TRzXuI")
+BOT_TOKEN = os.environ.get("8311253365:AAFww_jgJt9WK7blJSReu6wzQmCmsCC3xlI")
 CHAT_ID   = os.environ.get("1259600584")
 TV_SECRET = os.environ.get("TV_SECRET", "")
 
