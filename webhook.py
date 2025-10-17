@@ -3,7 +3,7 @@ import requests, os, datetime
 
 app = Flask(__name__)
 
-BOT_TOKEN = os.environ.get("8273484772:AAE-7tzaN6HrZOFyU8Cv_8QiZMO-fNDqeDI")  # defina na Render
+BOT_TOKEN = os.environ.get("8311253365:AAHh2IgWscBXbZ_SZnvzmF69WJQy5TRzXuI")  # defina na Render
 CHAT_ID   = os.environ.get("1259600584")    # defina na Render
 TG_API = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
 
